@@ -6,6 +6,7 @@ import android.content.UriMatcher
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
+import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.Card
 import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.CardDao
 import com.medhat.zeal.loyaltyapplication.data.repo.DiscountRepo
 import com.medhat.zeal.loyaltyapplication.di.dataModule
@@ -14,7 +15,7 @@ import com.medhat.zeal.loyaltyapplication.provider.utils.Constants
 import com.medhat.zeal.loyaltyapplication.provider.utils.Contract
 import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.QueryParameters.CARD_NUMBER
 import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.QueryParameters.ORIGINAL_AMOUNT
-import com.medhat.zeal.loyaltyapplication.provider.utils.RecognizedCodes
+import com.medhat.zeal.loyaltyapplication.provider.utils.OpCodes
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -25,7 +26,12 @@ private val sUriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
     addURI(
         Contract.AUTHORITY,
         Contract.AMOUNT_AFTER_DISCOUNT_PATH,
-        RecognizedCodes.AMOUNT_AFTER_DISCOUNT
+        OpCodes.AMOUNT_AFTER_DISCOUNT
+    )
+    addURI(
+        Contract.AUTHORITY,
+        Contract.INCREASE_CARD_PURCHASES_COUNT,
+        OpCodes.INCREASE_PURCHASES_COUNT
     )
 }
 
@@ -53,20 +59,27 @@ class LoyaltyProvider : ContentProvider() {
     ): Cursor {
         when (sUriMatcher.match(uri)) {
 
-            RecognizedCodes.AMOUNT_AFTER_DISCOUNT -> {
+            OpCodes.AMOUNT_AFTER_DISCOUNT -> {
                 val originalAmount = uri.getQueryParameter(ORIGINAL_AMOUNT)
                     ?: throw IllegalArgumentException("Missing $ORIGINAL_AMOUNT parameter")
 
                 val cardNumber = uri.getQueryParameter(CARD_NUMBER)
                     ?: throw IllegalArgumentException("Missing $CARD_NUMBER parameter")
 
-                val numericAmount = originalAmount.toLongOrNull()
+                val numericAmount = originalAmount.toFloatOrNull()
                     ?: throw IllegalArgumentException("Invalid $ORIGINAL_AMOUNT parameter, make sure to pass a number")
 
                 return getAmountAfterDiscountCursor(
                     cardNumber = cardNumber,
                     originalAmount = numericAmount
                 )
+            }
+
+            OpCodes.INCREASE_PURCHASES_COUNT -> {
+                val cardNumber = uri.getQueryParameter(CARD_NUMBER)
+                    ?: throw IllegalArgumentException("Missing $CARD_NUMBER parameter")
+
+                return getIncreaseCardPurchasesCountCursor(cardNumber)
             }
 
             else -> {
@@ -100,11 +113,11 @@ class LoyaltyProvider : ContentProvider() {
      * @return A [Cursor] object that has a single column that contains the adjusted amount after
      * discount.
      */
-    private fun getAmountAfterDiscountCursor(cardNumber: String, originalAmount: Long): Cursor {
+    private fun getAmountAfterDiscountCursor(cardNumber: String, originalAmount: Float): Cursor {
         val discount = discountRepo.getDiscount()
 
         val updatedAmount = if (isEligibleForDiscount(cardNumber) && discount != null) {
-            max(originalAmount - discount, 0)
+            max(originalAmount - discount, 0f)
         } else {
             originalAmount
         }
@@ -117,6 +130,22 @@ class LoyaltyProvider : ContentProvider() {
             addRow(
                 arrayOf(
                     updatedAmount
+                )
+            )
+        }
+    }
+
+    private fun getIncreaseCardPurchasesCountCursor(cardNumber: String): Cursor {
+        val card = cardDao.getCard(cardNumber) ?: Card(cardNumber, 0)
+        cardDao.upsertCard(card.copy(purchasesCount = card.purchasesCount + 1))
+        return MatrixCursor(
+            arrayOf(
+                Contract.CursorColumns.RESULT
+            )
+        ).apply {
+            addRow(
+                arrayOf(
+                    Contract.OP_SUCCESS
                 )
             )
         }

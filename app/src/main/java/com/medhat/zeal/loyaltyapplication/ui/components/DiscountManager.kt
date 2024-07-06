@@ -28,7 +28,7 @@ import com.medhat.zeal.loyaltyapplication.ui.theme.LoyaltyApplicationTheme
 fun DiscountManager(
     discount: String?,
     prefilledDiscountValue: String?,
-    onSaveClicked: (discountValue: Long) -> Unit,
+    onSaveClicked: (discountValue: Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -78,9 +78,9 @@ fun DiscountManager(
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-                val discount = discountValue.toLongOrNull()
-                if (discount != null) {
-                    onSaveClicked(discount)
+                val numericValue = discountValue.toFloatOrNull()
+                if (numericValue != null) {
+                    onSaveClicked(numericValue)
                 } else {
                     errorText = context.getString(R.string.invalid_discount_value)
                 }

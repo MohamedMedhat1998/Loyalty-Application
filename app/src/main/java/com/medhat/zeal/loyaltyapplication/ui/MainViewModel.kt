@@ -13,7 +13,7 @@ class MainViewModel(
     private val _discount = MutableStateFlow(discountRepo.getDiscount())
     val discount = _discount.asStateFlow()
 
-    fun onSaveClicked(discountValue: Long) {
+    fun onSaveClicked(discountValue: Float) {
         viewModelScope.launch {
             discountRepo.saveDiscount(discountValue)
             _discount.value = discountRepo.getDiscount()

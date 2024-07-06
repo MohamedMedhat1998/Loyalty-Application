@@ -8,9 +8,9 @@ class DiscountRepoImpl(
     private val simplePreferencesManager: SimplePreferencesManager
 ) : DiscountRepo {
 
-    override fun saveDiscount(discountValue: Long) {
+    override fun saveDiscount(discountValue: Float) {
         simplePreferencesManager.save(DISCOUNT_KEY, discountValue.toString())
     }
 
-    override fun getDiscount(): Long? = simplePreferencesManager.get(DISCOUNT_KEY)?.toLongOrNull()
+    override fun getDiscount(): Float? = simplePreferencesManager.get(DISCOUNT_KEY)?.toFloatOrNull()
 }

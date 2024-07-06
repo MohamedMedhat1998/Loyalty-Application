@@ -35,7 +35,6 @@ private val sUriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
     )
 }
 
-// TODO take thread-safety into consideration
 class LoyaltyProvider : ContentProvider() {
 
     private val cardDao: CardDao by inject()

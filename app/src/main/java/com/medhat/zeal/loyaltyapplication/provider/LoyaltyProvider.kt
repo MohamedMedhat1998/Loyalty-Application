@@ -1,20 +1,46 @@
 package com.medhat.zeal.loyaltyapplication.provider
 
 import android.content.ContentProvider
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.UriMatcher
 import android.database.Cursor
+import android.database.MatrixCursor
 import android.net.Uri
-import com.medhat.zeal.loyaltyapplication.provider.Contract.AUTHORITY
+import androidx.room.Room
+import com.medhat.zeal.loyaltyapplication.data.AppDataBase
+import com.medhat.zeal.loyaltyapplication.data.CardDao
+import com.medhat.zeal.loyaltyapplication.data.DB_NAME
+import com.medhat.zeal.loyaltyapplication.provider.utils.Constants
+import com.medhat.zeal.loyaltyapplication.provider.utils.Contract
+import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.DISCOUNT_ELIGIBLE
+import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.NOT_DISCOUNT_ELIGIBLE
+import com.medhat.zeal.loyaltyapplication.provider.utils.RecognizedCodes
 
 private val sUriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
-    addURI(AUTHORITY, Contract.ALL_CARDS, RecognizedCodes.ALL_CARDS)
-    addURI(AUTHORITY, Contract.SINGLE_CARD, RecognizedCodes.SINGLE_CARD)
+    addURI(
+        Contract.AUTHORITY,
+        Contract.DISCOUNT_ELIGIBILITY_CHECK_PATH,
+        RecognizedCodes.DISCOUNT_ELIGIBILITY_CHECK
+    )
 }
 
+// TODO take thread-safety into consideration
 class LoyaltyProvider : ContentProvider() {
+
+    private lateinit var appDataBase: AppDataBase
+    private var cardDao: CardDao? = null
+
     override fun onCreate(): Boolean {
-        TODO("Not yet implemented")
+        val currentContext = context
+        return if (currentContext != null) {
+            appDataBase =
+                Room.databaseBuilder(currentContext, AppDataBase::class.java, DB_NAME).build()
+            cardDao = appDataBase.cardDao()
+            true
+        } else {
+            false
+        }
     }
 
     override fun query(
@@ -24,30 +50,28 @@ class LoyaltyProvider : ContentProvider() {
         selectionArgs: Array<out String>?,
         sortOrder: String?
     ): Cursor? {
-        // TODO take thread-safety into consideration
         when (sUriMatcher.match(uri)) {
-            RecognizedCodes.ALL_CARDS -> {
-
+            RecognizedCodes.DISCOUNT_ELIGIBILITY_CHECK -> {
+                val cardNumber = ContentUris.parseId(uri).toString()
+                return getEligibilityResultCursor(cardNumber)
             }
-            RecognizedCodes.SINGLE_CARD -> {
 
-            }
             else -> {
-
+                throw IllegalArgumentException("Unknown URI: $uri")
             }
         }
     }
 
     override fun getType(uri: Uri): String? {
-        TODO("Not yet implemented")
+        return null
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {
-        TODO("Not yet implemented")
+        return null
     }
 
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int {
-        TODO("Not yet implemented")
+        return 0
     }
 
     override fun update(
@@ -56,6 +80,29 @@ class LoyaltyProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<out String>?
     ): Int {
-        TODO("Not yet implemented")
+        return 0
+    }
+
+    /**
+     * @return A [Cursor] object that contains only a single column that tells whether the card is
+     * eligible for a discount or not.
+     */
+    private fun getEligibilityResultCursor(cardNumber: String): Cursor {
+        println("XYZ: cardNumber: $cardNumber")
+        val cardPurchasesCount = cardDao?.getCard(cardNumber)?.purchasesCount ?: 0
+        val cursor = MatrixCursor(
+            arrayOf(Contract.CursorColumns.IS_ELIGIBLE_FOR_DISCOUNT)
+        )
+        cursor.addRow(
+            arrayOf(
+                // IS_ELIGIBLE_FOR_DISCOUNT
+                if (cardPurchasesCount >= Constants.DISCOUNT_ELIGIBILITY_PURCHASE_COUNT_THRESHOLD) {
+                    DISCOUNT_ELIGIBLE
+                } else {
+                    NOT_DISCOUNT_ELIGIBLE
+                }
+            )
+        )
+        return cursor
     }
 }

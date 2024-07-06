@@ -23,6 +23,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:name=".provider.LoyaltyProvider"
+            android:authorities="com.medhat.zeal.loyaltyapplication.provider"
+            android:exported="true"
+            android:enabled="true"
+            android:grantUriPermissions="true" />
     </application>
 
 </manifest>

@@ -3,4 +3,6 @@
     <string name="save">Save</string>
     <string name="invalid_discount_value">Invalid discount value</string>
     <string name="enter_discount_value">Enter discount value</string>
+    <string name="current_discount">Current Discount: %1$s</string>
+    <string name="no_discount">No discount</string>
 </resources>

@@ -1,24 +1,14 @@
 package com.medhat.zeal.loyaltyapplication.data.dataSource.localPrefs
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.stringPreferencesKey
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import android.content.SharedPreferences
 
 class SimplePreferencesManagerImpl(
-    private val datastore: DataStore<Preferences>,
+    private val preferences: SharedPreferences,
 ) : SimplePreferencesManager {
 
-    override suspend fun save(key: String, value: String) {
-        datastore.updateData {
-            it.toMutablePreferences().apply {
-                this[stringPreferencesKey(key)] = value
-            }
-        }
+    override fun save(key: String, value: String) {
+        preferences.edit().putString(key, value).apply()
     }
 
-    override fun get(key: String): Flow<String?> = datastore.data.map {
-        it[stringPreferencesKey(key)]
-    }
+    override fun get(key: String): String? = preferences.getString(key, null)
 }

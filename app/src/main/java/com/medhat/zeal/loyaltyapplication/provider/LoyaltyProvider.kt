@@ -1,42 +1,58 @@
 package com.medhat.zeal.loyaltyapplication.provider
 
 import android.content.ContentProvider
-import android.content.ContentUris
 import android.content.ContentValues
 import android.content.UriMatcher
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
-import androidx.room.Room
-import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.AppDataBase
-import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.CardDao
-import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.DB_NAME
-import com.medhat.zeal.loyaltyapplication.provider.utils.Constants
+import androidx.preference.PreferenceManager
+import com.medhat.zeal.loyaltyapplication.data.dataSource.localPrefs.SimplePreferencesManagerImpl
+import com.medhat.zeal.loyaltyapplication.data.repo.DiscountRepo
+import com.medhat.zeal.loyaltyapplication.data.repo.DiscountRepoImpl
 import com.medhat.zeal.loyaltyapplication.provider.utils.Contract
-import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.DISCOUNT_ELIGIBLE
-import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.NOT_DISCOUNT_ELIGIBLE
+import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.QueryParameters.ORIGINAL_AMOUNT
 import com.medhat.zeal.loyaltyapplication.provider.utils.RecognizedCodes
+import kotlin.math.max
 
 private val sUriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
+//    addURI(
+//        Contract.AUTHORITY,
+//        Contract.DISCOUNT_ELIGIBILITY_CHECK_PATH,
+//        RecognizedCodes.DISCOUNT_ELIGIBILITY_CHECK
+//    )
     addURI(
         Contract.AUTHORITY,
-        Contract.DISCOUNT_ELIGIBILITY_CHECK_PATH,
-        RecognizedCodes.DISCOUNT_ELIGIBILITY_CHECK
+        Contract.AMOUNT_AFTER_DISCOUNT_PATH,
+        RecognizedCodes.AMOUNT_AFTER_DISCOUNT
     )
 }
 
 // TODO take thread-safety into consideration
 class LoyaltyProvider : ContentProvider() {
 
-    private lateinit var appDataBase: AppDataBase
-    private var cardDao: CardDao? = null
+    //    private lateinit var appDataBase: AppDataBase
+//    private var cardDao: CardDao? = null
+    private lateinit var discountRepo: DiscountRepo
 
     override fun onCreate(): Boolean {
         val currentContext = context
+//        return if (currentContext != null) {
+//            appDataBase =
+//                Room.databaseBuilder(currentContext, AppDataBase::class.java, DB_NAME).build()
+//            cardDao = appDataBase.cardDao()
+//            true
+//        } else {
+//            false
+//        }
         return if (currentContext != null) {
-            appDataBase =
-                Room.databaseBuilder(currentContext, AppDataBase::class.java, DB_NAME).build()
-            cardDao = appDataBase.cardDao()
+            discountRepo = DiscountRepoImpl(
+                SimplePreferencesManagerImpl(
+                    PreferenceManager.getDefaultSharedPreferences(
+                        currentContext
+                    )
+                )
+            )
             true
         } else {
             false
@@ -49,11 +65,21 @@ class LoyaltyProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<out String>?,
         sortOrder: String?
-    ): Cursor? {
+    ): Cursor {
         when (sUriMatcher.match(uri)) {
-            RecognizedCodes.DISCOUNT_ELIGIBILITY_CHECK -> {
-                val cardNumber = ContentUris.parseId(uri).toString()
-                return getEligibilityResultCursor(cardNumber)
+//            RecognizedCodes.DISCOUNT_ELIGIBILITY_CHECK -> {
+//                val cardNumber = ContentUris.parseId(uri).toString()
+//                return getEligibilityResultCursor(cardNumber)
+//            }
+            RecognizedCodes.AMOUNT_AFTER_DISCOUNT -> {
+
+                val originalAmount = uri.getQueryParameter(ORIGINAL_AMOUNT)
+                    ?: throw IllegalArgumentException("Missing $ORIGINAL_AMOUNT parameter")
+
+                val numericAmount = originalAmount.toLongOrNull()
+                    ?: throw IllegalArgumentException("Invalid $ORIGINAL_AMOUNT parameter, make sure to pass a number")
+
+                return getAmountAfterDiscountCursor(numericAmount)
             }
 
             else -> {
@@ -84,25 +110,49 @@ class LoyaltyProvider : ContentProvider() {
     }
 
     /**
-     * @return A [Cursor] object that contains only a single column that tells whether the card is
-     * eligible for a discount or not.
+     * @return A [Cursor] object that has a single column that contains the adjusted amount after
+     * discount.
      */
-    private fun getEligibilityResultCursor(cardNumber: String): Cursor {
-        println("XYZ: cardNumber: $cardNumber")
-        val cardPurchasesCount = cardDao?.getCard(cardNumber)?.purchasesCount ?: 0
+    private fun getAmountAfterDiscountCursor(originalAmount: Long): Cursor {
+        val discount = discountRepo.getDiscount()
+        val updatedPrice = if (discount == null) {
+            originalAmount
+        } else {
+            max(originalAmount - discount, 0)
+        }
         val cursor = MatrixCursor(
-            arrayOf(Contract.CursorColumns.IS_ELIGIBLE_FOR_DISCOUNT)
+            arrayOf(
+                Contract.CursorColumns.ADJUSTED_AMOUNT
+            )
         )
         cursor.addRow(
             arrayOf(
-                // IS_ELIGIBLE_FOR_DISCOUNT
-                if (cardPurchasesCount >= Constants.DISCOUNT_ELIGIBILITY_PURCHASE_COUNT_THRESHOLD) {
-                    DISCOUNT_ELIGIBLE
-                } else {
-                    NOT_DISCOUNT_ELIGIBLE
-                }
+                updatedPrice
             )
         )
         return cursor
     }
+
+    /**
+     * @return A [Cursor] object that contains only a single column that tells whether the card is
+     * eligible for a discount or not.
+     */
+//    private fun getEligibilityResultCursor(cardNumber: String): Cursor {
+//        println("XYZ: cardNumber: $cardNumber")
+//        val cardPurchasesCount = cardDao?.getCard(cardNumber)?.purchasesCount ?: 0
+//        val cursor = MatrixCursor(
+//            arrayOf(Contract.CursorColumns.IS_ELIGIBLE_FOR_DISCOUNT)
+//        )
+//        cursor.addRow(
+//            arrayOf(
+//                // IS_ELIGIBLE_FOR_DISCOUNT
+//                if (cardPurchasesCount >= Constants.DISCOUNT_ELIGIBILITY_PURCHASE_COUNT_THRESHOLD) {
+//                    DISCOUNT_ELIGIBLE
+//                } else {
+//                    NOT_DISCOUNT_ELIGIBLE
+//                }
+//            )
+//        )
+//        return cursor
+//    }
 }

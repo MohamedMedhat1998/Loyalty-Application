@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.medhat.zeal.loyaltyapplication.ui.components.DiscountManager
 import com.medhat.zeal.loyaltyapplication.ui.theme.LoyaltyApplicationTheme
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -35,7 +36,10 @@ class MainActivity : ComponentActivity() {
                         contentAlignment = Alignment.Center
                     ) {
                         DiscountManager(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp),
+                            discount = discountValue?.toString(),
                             prefilledDiscountValue = discountValue?.toString(),
                             onSaveClicked = viewModel::onSaveClicked
                         )

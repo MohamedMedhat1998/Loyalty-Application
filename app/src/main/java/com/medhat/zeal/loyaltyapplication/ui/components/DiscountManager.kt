@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
@@ -25,6 +26,7 @@ import com.medhat.zeal.loyaltyapplication.ui.theme.LoyaltyApplicationTheme
 
 @Composable
 fun DiscountManager(
+    discount: String?,
     prefilledDiscountValue: String?,
     onSaveClicked: (discountValue: Long) -> Unit,
     modifier: Modifier = Modifier
@@ -39,6 +41,14 @@ fun DiscountManager(
     var errorText: String? by rememberSaveable { mutableStateOf(null) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            text = stringResource(
+                R.string.current_discount,
+                discount ?: stringResource(R.string.no_discount)
+            )
+        )
+
         TextField(
             modifier = Modifier.fillMaxWidth(),
             value = discountValue,
@@ -88,6 +98,7 @@ private fun DiscountManagerPreview() {
         DiscountManager(
             modifier = Modifier.fillMaxWidth(),
             prefilledDiscountValue = "50",
+            discount = "30",
             onSaveClicked = {}
         )
     }
@@ -100,6 +111,7 @@ private fun DiscountManagerNoPreDefinedValuePreview() {
         DiscountManager(
             modifier = Modifier.fillMaxWidth(),
             prefilledDiscountValue = null,
+            discount = null,
             onSaveClicked = {}
         )
     }

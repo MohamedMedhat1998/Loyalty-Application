@@ -68,8 +68,8 @@ dependencies {
     // Koin di
     implementation(libs.koin)
 
-    // Datastore
-    implementation(libs.datastore)
+    // Preferences
+    implementation(libs.androidx.preferences)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

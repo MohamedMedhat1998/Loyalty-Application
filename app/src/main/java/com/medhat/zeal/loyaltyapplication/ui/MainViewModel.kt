@@ -10,21 +10,13 @@ import kotlinx.coroutines.launch
 class MainViewModel(
     private val discountRepo: DiscountRepo
 ) : ViewModel() {
-    private val _discount = MutableStateFlow<Long?>(null)
+    private val _discount = MutableStateFlow(discountRepo.getDiscount())
     val discount = _discount.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            discountRepo.getDiscount()
-                .collect {
-                    _discount.value = it
-                }
-        }
-    }
 
     fun onSaveClicked(discountValue: Long) {
         viewModelScope.launch {
             discountRepo.saveDiscount(discountValue)
+            _discount.value = discountRepo.getDiscount()
         }
     }
 }

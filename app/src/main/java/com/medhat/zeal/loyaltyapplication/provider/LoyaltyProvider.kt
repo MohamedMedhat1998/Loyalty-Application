@@ -6,21 +6,22 @@ import android.content.UriMatcher
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
-import androidx.preference.PreferenceManager
-import com.medhat.zeal.loyaltyapplication.data.dataSource.localPrefs.SimplePreferencesManagerImpl
+import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.CardDao
 import com.medhat.zeal.loyaltyapplication.data.repo.DiscountRepo
-import com.medhat.zeal.loyaltyapplication.data.repo.DiscountRepoImpl
+import com.medhat.zeal.loyaltyapplication.di.dataModule
+import com.medhat.zeal.loyaltyapplication.di.viewModelModule
+import com.medhat.zeal.loyaltyapplication.provider.utils.Constants
 import com.medhat.zeal.loyaltyapplication.provider.utils.Contract
+import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.QueryParameters.CARD_NUMBER
 import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.QueryParameters.ORIGINAL_AMOUNT
 import com.medhat.zeal.loyaltyapplication.provider.utils.RecognizedCodes
+import org.koin.android.ext.android.inject
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
 import kotlin.math.max
 
 private val sUriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
-//    addURI(
-//        Contract.AUTHORITY,
-//        Contract.DISCOUNT_ELIGIBILITY_CHECK_PATH,
-//        RecognizedCodes.DISCOUNT_ELIGIBILITY_CHECK
-//    )
     addURI(
         Contract.AUTHORITY,
         Contract.AMOUNT_AFTER_DISCOUNT_PATH,
@@ -31,32 +32,16 @@ private val sUriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
 // TODO take thread-safety into consideration
 class LoyaltyProvider : ContentProvider() {
 
-    //    private lateinit var appDataBase: AppDataBase
-//    private var cardDao: CardDao? = null
-    private lateinit var discountRepo: DiscountRepo
+    private val cardDao: CardDao by inject()
+    private val discountRepo: DiscountRepo by inject()
 
     override fun onCreate(): Boolean {
-        val currentContext = context
-//        return if (currentContext != null) {
-//            appDataBase =
-//                Room.databaseBuilder(currentContext, AppDataBase::class.java, DB_NAME).build()
-//            cardDao = appDataBase.cardDao()
-//            true
-//        } else {
-//            false
-//        }
-        return if (currentContext != null) {
-            discountRepo = DiscountRepoImpl(
-                SimplePreferencesManagerImpl(
-                    PreferenceManager.getDefaultSharedPreferences(
-                        currentContext
-                    )
-                )
-            )
-            true
-        } else {
-            false
+        startKoin {
+            androidLogger()
+            androidContext(context!!)
+            modules(dataModule, viewModelModule)
         }
+        return true
     }
 
     override fun query(
@@ -67,19 +52,21 @@ class LoyaltyProvider : ContentProvider() {
         sortOrder: String?
     ): Cursor {
         when (sUriMatcher.match(uri)) {
-//            RecognizedCodes.DISCOUNT_ELIGIBILITY_CHECK -> {
-//                val cardNumber = ContentUris.parseId(uri).toString()
-//                return getEligibilityResultCursor(cardNumber)
-//            }
-            RecognizedCodes.AMOUNT_AFTER_DISCOUNT -> {
 
+            RecognizedCodes.AMOUNT_AFTER_DISCOUNT -> {
                 val originalAmount = uri.getQueryParameter(ORIGINAL_AMOUNT)
                     ?: throw IllegalArgumentException("Missing $ORIGINAL_AMOUNT parameter")
+
+                val cardNumber = uri.getQueryParameter(CARD_NUMBER)
+                    ?: throw IllegalArgumentException("Missing $CARD_NUMBER parameter")
 
                 val numericAmount = originalAmount.toLongOrNull()
                     ?: throw IllegalArgumentException("Invalid $ORIGINAL_AMOUNT parameter, make sure to pass a number")
 
-                return getAmountAfterDiscountCursor(numericAmount)
+                return getAmountAfterDiscountCursor(
+                    cardNumber = cardNumber,
+                    originalAmount = numericAmount
+                )
             }
 
             else -> {
@@ -89,15 +76,15 @@ class LoyaltyProvider : ContentProvider() {
     }
 
     override fun getType(uri: Uri): String? {
-        return null
+        throw UnsupportedOperationException()
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {
-        return null
+        throw UnsupportedOperationException()
     }
 
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int {
-        return 0
+        throw UnsupportedOperationException()
     }
 
     override fun update(
@@ -106,53 +93,37 @@ class LoyaltyProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<out String>?
     ): Int {
-        return 0
+        throw UnsupportedOperationException()
     }
 
     /**
      * @return A [Cursor] object that has a single column that contains the adjusted amount after
      * discount.
      */
-    private fun getAmountAfterDiscountCursor(originalAmount: Long): Cursor {
+    private fun getAmountAfterDiscountCursor(cardNumber: String, originalAmount: Long): Cursor {
         val discount = discountRepo.getDiscount()
-        val updatedPrice = if (discount == null) {
-            originalAmount
-        } else {
+
+        val updatedAmount = if (isEligibleForDiscount(cardNumber) && discount != null) {
             max(originalAmount - discount, 0)
+        } else {
+            originalAmount
         }
-        val cursor = MatrixCursor(
+
+        return MatrixCursor(
             arrayOf(
                 Contract.CursorColumns.ADJUSTED_AMOUNT
             )
-        )
-        cursor.addRow(
-            arrayOf(
-                updatedPrice
+        ).apply {
+            addRow(
+                arrayOf(
+                    updatedAmount
+                )
             )
-        )
-        return cursor
+        }
     }
 
-    /**
-     * @return A [Cursor] object that contains only a single column that tells whether the card is
-     * eligible for a discount or not.
-     */
-//    private fun getEligibilityResultCursor(cardNumber: String): Cursor {
-//        println("XYZ: cardNumber: $cardNumber")
-//        val cardPurchasesCount = cardDao?.getCard(cardNumber)?.purchasesCount ?: 0
-//        val cursor = MatrixCursor(
-//            arrayOf(Contract.CursorColumns.IS_ELIGIBLE_FOR_DISCOUNT)
-//        )
-//        cursor.addRow(
-//            arrayOf(
-//                // IS_ELIGIBLE_FOR_DISCOUNT
-//                if (cardPurchasesCount >= Constants.DISCOUNT_ELIGIBILITY_PURCHASE_COUNT_THRESHOLD) {
-//                    DISCOUNT_ELIGIBLE
-//                } else {
-//                    NOT_DISCOUNT_ELIGIBLE
-//                }
-//            )
-//        )
-//        return cursor
-//    }
+    private fun isEligibleForDiscount(cardNumber: String): Boolean {
+        val purchasesCount = cardDao.getCard(cardNumber)?.purchasesCount ?: 0
+        return purchasesCount >= Constants.DISCOUNT_ELIGIBILITY_PURCHASE_COUNT_THRESHOLD
+    }
 }

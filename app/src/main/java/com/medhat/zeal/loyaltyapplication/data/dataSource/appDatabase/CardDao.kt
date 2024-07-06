@@ -1,4 +1,4 @@
-package com.medhat.zeal.loyaltyapplication.data
+package com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase
 
 import androidx.room.Dao
 import androidx.room.Insert

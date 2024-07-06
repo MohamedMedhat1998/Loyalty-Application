@@ -65,6 +65,12 @@ dependencies {
     implementation(libs.room)
     kapt(libs.room.compiler)
 
+    // Koin di
+    implementation(libs.koin)
+
+    // Datastore
+    implementation(libs.datastore)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

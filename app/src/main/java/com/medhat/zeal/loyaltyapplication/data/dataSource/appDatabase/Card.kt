@@ -1,4 +1,4 @@
-package com.medhat.zeal.loyaltyapplication.data
+package com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

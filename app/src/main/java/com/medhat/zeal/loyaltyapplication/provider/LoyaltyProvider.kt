@@ -8,9 +8,9 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import androidx.room.Room
-import com.medhat.zeal.loyaltyapplication.data.AppDataBase
-import com.medhat.zeal.loyaltyapplication.data.CardDao
-import com.medhat.zeal.loyaltyapplication.data.DB_NAME
+import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.AppDataBase
+import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.CardDao
+import com.medhat.zeal.loyaltyapplication.data.dataSource.appDatabase.DB_NAME
 import com.medhat.zeal.loyaltyapplication.provider.utils.Constants
 import com.medhat.zeal.loyaltyapplication.provider.utils.Contract
 import com.medhat.zeal.loyaltyapplication.provider.utils.Contract.DISCOUNT_ELIGIBLE

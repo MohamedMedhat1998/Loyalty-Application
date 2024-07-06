@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Loyalty Application</string>
+    <string name="save">Save</string>
+    <string name="invalid_discount_value">Invalid discount value</string>
+    <string name="enter_discount_value">Enter discount value</string>
 </resources>
